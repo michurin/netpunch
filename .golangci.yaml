@@ -1,0 +1,19 @@
+linters:
+  enable-all: true
+  disable:
+    - wrapcheck
+    - varnamelen
+    - paralleltest
+    - gomnd
+    - wsl
+    - nlreturn
+    - goerr113
+      # deprecated
+    - interfacer
+    - maligned
+    - scopelint
+    - golint
+
+linters-settings:
+  cyclop:
+    max-complexity: 12
