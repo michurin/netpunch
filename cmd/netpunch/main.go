@@ -2,44 +2,88 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"path"
+	"strings"
 
 	app "github.com/michurin/netpunch/netpunchlib"
 )
 
-const (
-	roleControl = "c"
-	roleNodeA   = "a"
-	roleNodeB   = "b"
+var (
+	// go build -ldflags "-X main.gitCommit=$(git rev-list --abbrev-commit -1 HEAD)" ./cmd/...
+	gitCommit = ""
+	version   = "0.1"
+
+	// CLI flags.
+	role       string
+	secret     string
+	remoteAddr string
+	localAddr  string
 )
 
-func help() {
-	fmt.Fprintf(os.Stderr, `USAGE:
-%[1]s role secret local_addr [server_addr]
+func init() {
+	if gitCommit != "" {
+		version += "-" + gitCommit
+	}
+}
 
-Roles:
-  a — Node A
-  b — Node B
-  c — Control node for coordination (server)
+func setupFlags() error {
+	flag.CommandLine.SetOutput(os.Stderr)
+	flag.StringVar(&role, "peer", "", `role of peer: a or b
+if peer not specified, we run in control mode`)
+	flag.StringVar(&secret, "secret", "", "shared secret to sign messages")
+	flag.StringVar(&remoteAddr, "remote", "", "public address of control node; for peer-mode only")
+	flag.StringVar(&localAddr, "local", "", `local address
+in control mode it is listening address
+in peer mode it is outgoing address`)
+	defaultUsage := flag.Usage
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Version: %s\n", version)
+		defaultUsage()
+		fmt.Fprintf(flag.CommandLine.Output(), `Examples:
+Control mode (run at 2.3.3.3):
+        %[1]s -secret TheSecretWord -local :7777
+Peer mode (run in private network, peer a):
+        %[1]s -peer a -secret TheSecretWord -remote 2.3.3.3:7777 -local :1194
+`, path.Base(os.Args[0]))
+	}
 
-Examples:
-Server mode:
-%[1]s c secret :5555
-Client mode:
-%[1]s a secret :7777 1.2.3.4:5555
-%[1]s b secret :7777 1.2.3.4:5555
-`, os.Args[0])
+	flag.Parse()
+
+	messages := []string(nil)
+	switch role {
+	case "a", "b":
+		if remoteAddr == "" {
+			messages = append(messages, fmt.Sprintf("you have to specify remote address in peer mode role %q", role))
+		}
+	case "":
+		if remoteAddr != "" {
+			messages = append(messages, "you do not have to specify remote address in control mode")
+		}
+	default:
+		messages = append(messages, fmt.Sprintf("invalid role: %q", role))
+	}
+	if secret == "" {
+		messages = append(messages, "you have to specify secret")
+	}
+	if localAddr == "" {
+		messages = append(messages, "you have to specify local address")
+	}
+	if messages != nil {
+		return errors.New(strings.Join(messages, "; "))
+	}
+	return nil
 }
 
 func helpAndExitIfError(err error) {
 	if err == nil {
 		return
 	}
-	fmt.Fprintln(os.Stderr, "ERROR:", err.Error())
-	help()
+	fmt.Fprintln(os.Stderr, "Error:", err.Error())
 	os.Exit(1)
 }
 
@@ -64,51 +108,25 @@ func printResult(laddr, addr *net.UDPAddr) {
 		addr.Port)
 }
 
-func parseArgsCommon() (role string, secret []byte, laddr string, err error) {
-	if len(os.Args) < 4 {
-		err = errors.New("args: not enough arguments")
-		return
-	}
-	role = os.Args[1]
-	secret = []byte(os.Args[2])
-	laddr = os.Args[3]
-	return
-}
-
-func checkArgs(n int, m string) error {
-	if len(os.Args) == n {
-		return nil
-	}
-	return errors.New(m)
-}
-
 func main() {
-	role, secret, laddr, err := parseArgsCommon()
-	helpAndExitIfError(err)
+	helpAndExitIfError(setupFlags())
 
 	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
-	logger.SetPrefix(fmt.Sprintf("[%d] [%s] ", os.Getpid(), role))
 	opts := app.ConnOption(
-		// app.LogMW(logger), // uncomment this like to get full debugging including signatores
-		app.SignMW(secret),
+		// app.LogMW(logger), // uncomment this if you like to see full debugging including signatores
+		app.SignMW([]byte(secret)),
 		app.LogMW(logger))
 
-	switch role {
-	case roleControl:
-		helpAndExitIfError(checkArgs(4, "You have to specify 3 arguments in control (`c`) mode"))
-		logger.Print("[info] Server started on " + laddr)
-		err := app.Server(laddr, opts)
+	if role == "" {
+		logger.SetPrefix(fmt.Sprintf("[%d] ", os.Getpid()))
+		logger.Print("[info] Start in control mode on " + localAddr)
+		err := app.Server(localAddr, opts)
 		helpAndExitIfError(err)
-		return
-	case roleNodeA, roleNodeB:
-		helpAndExitIfError(checkArgs(5, "You have to specify 4 arguments in node (`a` and `b`) mode"))
-		raddr := os.Args[4]
-		logger.Print("[info] Client started on " + laddr + " to server at " + raddr)
-		laddr, addr, err := app.Client(role, laddr, raddr, opts) // btw, abstraction leaking (role: arg->payload)
+	} else {
+		logger.SetPrefix(fmt.Sprintf("[%d] [%s] ", os.Getpid(), role))
+		logger.Print("[info] Start in peer mode on " + localAddr + " to server at " + remoteAddr)
+		laddr, addr, err := app.Client(role, localAddr, remoteAddr, opts) // btw, abstraction leaking (role: arg->payload)
 		helpAndExitIfError(err)
 		printResult(laddr, addr)
-		return
-	default:
-		help()
 	}
 }
