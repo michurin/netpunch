@@ -17,3 +17,10 @@ linters:
 linters-settings:
   cyclop:
     max-complexity: 12
+
+issues:
+  exclude-rules:
+    - path: cmd/netpunch/main.go
+      linters:
+        - gochecknoinits
+        - gochecknoglobals
