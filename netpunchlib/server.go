@@ -26,7 +26,7 @@ func Server(address string, options ...Option) error {
 		if err != nil {
 			continue
 		}
-		if n < 1 {
+		if n <= 0 {
 			continue
 		}
 		idx := int(data[0]) & 1
