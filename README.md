@@ -5,6 +5,13 @@ Netpunch is a tool to establishes network connections between nodes which are be
 Netpunch has to be run on one *control* node with public IP address and on two *peer*-nodes from private networks.
 Control node makes private peers able to know their public IPs and ports and setup VPN connection over UDP.
 
+It is not an unheard solution. It is easy to find a lot of scripts, that are doing the same things.
+However, the netpunch provides at least three advantages:
+
+- You do not need root permissions to run it. The running with regular user permissions makes your system more secures
+- You do not need additional tools like `tcpdump`, `awk` etc, or additional libs
+- All network interactions are protected by signature. So it is difficult to abuse your control node
+
 ## Quick start with OpenVPN
 
 ### Install binaries
