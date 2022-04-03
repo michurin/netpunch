@@ -2,10 +2,11 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"net"
 )
 
-func Server(address string, options ...Option) error {
+func Server(ctx context.Context, address string, options ...Option) error {
 	config := newConfig(options...)
 	addr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
@@ -16,13 +17,21 @@ func Server(address string, options ...Option) error {
 		return err
 	}
 	conn := config.wrapConnection(udpConn)
-	defer conn.Close()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		<-ctx.Done()
+		conn.Close()
+	}()
 
 	addresses := [][]byte{nil, nil}
 
 	for {
 		data := make([]byte, 1024) // we create new slice every time to prevent sharing memory between server and handler
 		n, addr, err := conn.ReadFromUDP(data)
+		if ctx.Err() != nil {
+			return nil
+		}
 		if err != nil {
 			continue
 		}

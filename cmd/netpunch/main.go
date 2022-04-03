@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -122,6 +123,8 @@ func printResult(laddr, addr *net.UDPAddr) {
 func main() {
 	helpAndExitIfError(setupFlags())
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
 	opts := app.ConnOption(
 		// app.LogMW(logger), // uncomment this if you like to see full debugging including signatores
@@ -131,7 +134,7 @@ func main() {
 	if role == "" {
 		logger.SetPrefix(fmt.Sprintf("[%d] ", os.Getpid()))
 		logger.Print("[info] Start in control mode on " + localAddr)
-		err := app.Server(localAddr, opts)
+		err := app.Server(ctx, localAddr, opts)
 		helpAndExitIfError(err)
 	} else {
 		logger.SetPrefix(fmt.Sprintf("[%d] [%s] ", os.Getpid(), role))
