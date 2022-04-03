@@ -13,6 +13,7 @@ set -x # Remove to disable debugging
 SERVER='you-host-with-public-ip.net:10001'
 
 # Shared secret, has to be the same on all nodes: peers and control one
+# You are also able to read secret from file, using -secret-file option
 SECRET='Secret'
 
 # Local port, you are free to change it
