@@ -15,7 +15,7 @@ case "$1" in
     -l)
         go tool dist list
         ;;
-    *)
+    -h)
         echo 'Usage:'
         echo '-b'
         echo '  just build'
@@ -23,5 +23,9 @@ case "$1" in
         echo '  cross compile; see -l'
         echo '-l'
         echo '  list of available options for cross compilation'
+        echo '-h'
+        echo '  usage'
         ;;
+    *)
+        echo 'Invalid option, try -h'
 esac

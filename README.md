@@ -8,7 +8,7 @@ Control node makes private peers able to know their public IPs and ports and set
 It is not an unheard solution. It is easy to find a lot of scripts, that are doing the same things.
 However, the netpunch provides at least three advantages:
 
-- You do not need root permissions to run it. The running with regular user permissions makes your system more secures
+- You do not need root permissions to run it. The running with regular user permissions makes your system securer
 - You do not need additional tools like `tcpdump`, `awk` etc, or additional libs
 - All network interactions are protected by signature. So it is difficult to abuse your control node
 
