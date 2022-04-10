@@ -107,6 +107,7 @@ LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: :5001 n/a 5001 127.0.0.1:5000 127.0.0.1 500
 
 - The same private network: netpunch won't work if both peer are sitting behind the same NAT
 - Nobody yet knows whether netpunch works on MS Windows. Please, let me know, if you do
+- If secrets are mismatched it appears like a fake message with corresponding error. Slightly ugly
 
 ### Internals
 

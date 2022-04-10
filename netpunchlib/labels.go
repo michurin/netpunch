@@ -1,4 +1,4 @@
-package app
+package netpunchlib
 
 const (
 	labelPeerInfo   = 'i'

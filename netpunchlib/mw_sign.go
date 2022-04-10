@@ -1,20 +1,19 @@
-package app
+package netpunchlib
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/ascii85"
-	"errors"
 	"net"
 )
 
 type signWrapper struct {
-	next   Connenction
+	next   Connection
 	secret []byte
 }
 
-func SignMW(secret []byte) MW {
-	return func(conn Connenction) Connenction {
+func SigningMiddleware(secret []byte) ConnectionMiddleware {
+	return func(conn Connection) Connection {
 		return &signWrapper{
 			next:   conn,
 			secret: secret,
@@ -35,18 +34,18 @@ func (w *signWrapper) ReadFromUDP(b []byte) (int, *net.UDPAddr, error) {
 		return n, addr, err
 	}
 	if n < signLen+2 {
-		return 0, addr, errors.New("message too short")
+		return copy(b, []byte("[message skipped, since it is too short]")), addr, nil // data too short, pretentd it is no data
 	}
 	sum := w.sum(buff[signLen+1 : n])
 	if !bytes.Equal(sum, buff[:signLen]) {
-		return 0, addr, errors.New("invalid signature")
+		return copy(b, []byte("[message skipped due to invalid signature]")), addr, nil // invalid signature, pretend it is no data
 	}
-	copy(b, buff[signLen+1:n])
-	return n - signLen - 1, addr, nil
+	return copy(b, buff[signLen+1:n]), addr, nil
 }
 
 func (w *signWrapper) WriteToUDP(b []byte, addr *net.UDPAddr) (int, error) {
-	buff := make([]byte, len(b)+signLen+1)
+	m := len(b)
+	buff := make([]byte, m+signLen+1)
 	copy(buff, w.sum(b))
 	buff[signLen] = 32
 	copy(buff[signLen+1:], b)
@@ -54,7 +53,7 @@ func (w *signWrapper) WriteToUDP(b []byte, addr *net.UDPAddr) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	return n - signLen - 1, nil
+	return m, nil
 }
 
 func (w *signWrapper) sum(data []byte) []byte {

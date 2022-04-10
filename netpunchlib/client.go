@@ -1,138 +1,131 @@
-package app
+package netpunchlib
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"time"
 )
 
-type task struct {
-	message  []byte
-	addr     *net.UDPAddr
-	tries    int
-	interval time.Duration
-	fin      bool
+type modeInfo struct {
+	retrys  int
+	delay   time.Duration
+	message []byte
 }
 
-type result struct {
-	addr *net.UDPAddr
-	err  error
+const (
+	modeDiscovering = iota
+	modePinging
+	modePonging
+	modeClosing
+	modeSleeping
+)
+
+var modes = map[int]modeInfo{ //nolint:gochecknoglobals
+	modeDiscovering: {
+		retrys:  1,
+		delay:   time.Second,
+		message: nil,
+	},
+	modePinging: {
+		retrys:  10,
+		delay:   100 * time.Millisecond,
+		message: []byte{labelPing},
+	},
+	modePonging: {
+		retrys:  10,
+		delay:   100 * time.Millisecond,
+		message: []byte{labelPong},
+	},
+	modeClosing: {
+		retrys:  5,
+		delay:   20 * time.Millisecond,
+		message: []byte{labelClose},
+	},
+	modeSleeping: {
+		retrys:  1,
+		delay:   30 * time.Second,
+		message: nil, // not used
+	},
 }
 
-func taskPing(addr *net.UDPAddr) task {
-	return task{
-		message:  []byte{labelPing},
-		addr:     addr,
-		tries:    20,
-		interval: 100 * time.Millisecond,
-		fin:      false,
-	}
-}
-
-func taskPong(addr *net.UDPAddr) task {
-	return task{
-		message:  []byte{labelPong},
-		addr:     addr,
-		tries:    20,
-		interval: 100 * time.Millisecond,
-		fin:      false,
-	}
-}
-
-func taskClose(addr *net.UDPAddr) task {
-	return task{
-		message:  []byte{labelClose},
-		addr:     addr,
-		tries:    5,
-		interval: 50 * time.Millisecond,
-		fin:      true, // it is final task
-	}
-}
-
-func taskRequestToServer(addr *net.UDPAddr, message []byte) task {
-	return task{
-		message:  message,
-		addr:     addr,
-		tries:    -1, // infinite
-		interval: 20 * time.Second,
-		fin:      false,
-	}
-}
-
-func taskEexecutor(
-	conn Connenction,
+func processor(
+	conn ConnectionWriter,
 	serverAddr *net.UDPAddr,
 	serverMessage []byte,
-	tq chan task,
-	res chan result,
+	serverDataChan <-chan receivedMessage,
+	serverErrChan <-chan error,
+	addrChan chan<- *net.UDPAddr,
+	errChan chan<- error,
 ) {
-	defaultTask := taskRequestToServer(serverAddr, serverMessage)
-	tsk := defaultTask
-	ok := true
-	for ok {
-		_, err := conn.WriteToUDP(tsk.message, tsk.addr)
-		if err != nil {
-			res <- result{addr: nil, err: err}
-			return
-		}
-		if tsk.tries > 0 {
-			tsk.tries--
-		}
-		if tsk.tries == 0 {
-			if tsk.fin {
-				res <- result{addr: tsk.addr, err: nil}
+	var err error
+	var peerAddr *net.UDPAddr
+	mode := modeDiscovering
+	tryCount := 0
+	for {
+		tryCount++
+		minfo := modes[mode]
+		if mode != modeSleeping {
+			msg := minfo.message
+			addr := peerAddr
+			if msg == nil {
+				msg = serverMessage
+				addr = serverAddr
+			}
+			_, err = conn.WriteToUDP(msg, addr)
+			if err != nil {
+				errChan <- err
 				return
 			}
-			tsk = defaultTask // back to server polling
 		}
 		select {
-		case <-time.After(tsk.interval):
-		case tsk, ok = <-tq: // stop looping if channel is closed
+		case <-time.After(minfo.delay):
+			if tryCount >= minfo.retrys {
+				if mode == modeClosing {
+					addrChan <- peerAddr
+					return
+				}
+				if mode != modeDiscovering { // stay in discovering mode
+					mode = modeSleeping
+				}
+				tryCount = 0
+			}
+		case data := <-serverDataChan:
+			if len(data.message) == 0 {
+				break // ignore empty messages
+			}
+			switch data.message[0] {
+			case labelPeerInfo:
+				flds := bytes.Split(data.message, []byte{labelsSeporator})
+				if len(flds) != 3 {
+					break // ignore invalid messages
+				}
+				peerAddr, err = net.ResolveUDPAddr("udp", string(flds[2]))
+				if err != nil {
+					errChan <- err
+					return
+				}
+				mode = modePinging // start pinging
+			case labelPing:
+				peerAddr = data.addr // ping can come before first peer info response
+				mode = modePonging
+			case labelPong:
+				peerAddr = data.addr // and pong can too
+				mode = modeClosing
+			case labelClose:
+				addrChan <- peerAddr
+				return
+			}
+			tryCount = 0
+		case err := <-serverErrChan:
+			errChan <- err
+			return
 		}
 	}
 }
 
-func serveForever(conn Connenction, tq chan task, res chan result) {
-	buff := make([]byte, 1024)
-	for {
-		n, addr, err := conn.ReadFromUDP(buff)
-		if err != nil { // TODO consider is fatal error? maybe skip?
-			res <- result{addr: nil, err: err}
-			close(tq) // avoid goroutine leaking
-			break
-		}
-		if n == 0 {
-			continue
-		}
-		switch buff[0] {
-		case labelPeerInfo:
-			flds := bytes.Split(buff[:n], []byte{labelsSeporator})
-			if len(flds) != 3 {
-				break
-			}
-			peerAddr, err := net.ResolveUDPAddr("udp", string(flds[2]))
-			if err != nil {
-				// TODO log? stop?
-				break
-			}
-			tq <- taskPing(peerAddr)
-		case labelPing:
-			tq <- taskPong(addr)
-		case labelPong:
-			tq <- taskClose(addr) // task "close" will stop executor after all tries
-			return                // stop listening on first pong
-		case labelClose:
-			close(tq) // stop execution immediately
-			res <- result{addr: addr, err: nil}
-			return // stop listening on first close
-		default:
-			// TODO Unexpected data. Log? stop? sleep?
-		}
-	}
-}
-
-func Client(slot, address, remoteAddress string, opt ...Option) (*net.UDPAddr, *net.UDPAddr, error) {
+func Client(ctx context.Context, slot, address, remoteAddress string, opt ...Option) (*net.UDPAddr, *net.UDPAddr, error) {
 	if slot != "a" && slot != "b" {
 		return nil, nil, fmt.Errorf("invalid slot (role): %s", slot)
 	}
@@ -154,14 +147,28 @@ func Client(slot, address, remoteAddress string, opt ...Option) (*net.UDPAddr, *
 		return nil, nil, err
 	}
 	conn := config.wrapConnection(udpConn)
-	defer conn.Close()
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()     // we must to cancel first
+		conn.Close() // will be closed synchronously
+	}()
 
-	taskQueue := make(chan task, 8)
-	resultChan := make(chan result, 1)
+	serverDataChan := make(chan receivedMessage)
+	serverErrChan := make(chan error)
 
-	go taskEexecutor(conn, addr, message, taskQueue, resultChan)
-	go serveForever(conn, taskQueue, resultChan)
+	go serve(ctx, conn, serverDataChan, serverErrChan)
 
-	res := <-resultChan
-	return laddr, res.addr, res.err
+	addrChan := make(chan *net.UDPAddr)
+	errChan := make(chan error)
+
+	go processor(conn, addr, message, serverDataChan, serverErrChan, addrChan, errChan)
+
+	select {
+	case addr := <-addrChan:
+		return laddr, addr, nil
+	case err := <-errChan:
+		return nil, nil, err
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	}
 }

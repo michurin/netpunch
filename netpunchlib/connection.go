@@ -1,12 +1,24 @@
-package app
+package netpunchlib
 
 import "net"
 
-//go:generate mockgen -source=$GOFILE -destination=./mock/$GOFILE -package=mock
-type Connenction interface {
-	Close() error
+type ConnectionReader interface {
 	ReadFromUDP([]byte) (int, *net.UDPAddr, error)
+}
+
+type ConnectionWriter interface {
 	WriteToUDP([]byte, *net.UDPAddr) (int, error)
 }
 
-type MW func(Connenction) Connenction
+type ConnectionCloser interface {
+	Close() error
+}
+
+//go:generate mockgen -source=$GOFILE -destination=./internal/mock/$GOFILE -package=mock
+type Connection interface {
+	ConnectionReader
+	ConnectionWriter
+	ConnectionCloser
+}
+
+type ConnectionMiddleware func(Connection) Connection

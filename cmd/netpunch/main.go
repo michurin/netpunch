@@ -9,10 +9,12 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"syscall"
 
-	app "github.com/michurin/netpunch/netpunchlib"
+	"github.com/michurin/netpunch/netpunchlib"
 )
 
 var (
@@ -123,23 +125,34 @@ func printResult(laddr, addr *net.UDPAddr) {
 func main() {
 	helpAndExitIfError(setupFlags())
 
+	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
-	opts := app.ConnOption(
-		// app.LogMW(logger), // uncomment this if you like to see full debugging including signatores
-		app.SignMW([]byte(secret)),
-		app.LogMW(logger))
+
+	exit := make(chan os.Signal, 1) // we need to reserve to buffer size 1, so the notifier are not blocked
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-exit
+		sigID, _ := sig.(syscall.Signal)
+		logger.Print(fmt.Sprintf("[info] Shutting down due to signal: %s (0x%02X)", sig.String(), int(sigID)))
+		cancel()
+	}()
+
+	opts := netpunchlib.ConnOption(
+		// netpunchlib.LoggingMiddleware(logger), // uncomment this if you like to see full debugging including signatores
+		netpunchlib.SigningMiddleware([]byte(secret)),
+		netpunchlib.LoggingMiddleware(logger))
 
 	if role == "" {
 		logger.SetPrefix(fmt.Sprintf("[%d] ", os.Getpid()))
 		logger.Print("[info] Start in control mode on " + localAddr)
-		err := app.Server(ctx, localAddr, opts)
+		err := netpunchlib.Server(ctx, localAddr, opts)
 		helpAndExitIfError(err)
 	} else {
 		logger.SetPrefix(fmt.Sprintf("[%d] [%s] ", os.Getpid(), role))
 		logger.Print("[info] Start in peer mode on " + localAddr + " to server at " + remoteAddr)
-		laddr, addr, err := app.Client(role, localAddr, remoteAddr, opts) // btw, abstraction leaking (role: arg->payload)
+		laddr, addr, err := netpunchlib.Client(ctx, role, localAddr, remoteAddr, opts) // btw, abstraction leaking (role: arg->payload)
 		helpAndExitIfError(err)
 		printResult(laddr, addr)
 	}
