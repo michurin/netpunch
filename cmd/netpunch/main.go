@@ -17,13 +17,14 @@ import (
 var (
 	// go build -ldflags "-X main.gitCommit=$(git rev-list --abbrev-commit -1 HEAD)" ./cmd/...
 	gitCommit = ""
-	version   = "0.1"
+	version   = "0.1" // tweaked in init
 
 	// CLI flags.
-	role       string
-	secret     string
-	remoteAddr string
-	localAddr  string
+	role        string
+	secret      string
+	remoteAddr  string
+	localAddr   string
+	showVersion bool
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 func setupFlags() error {
 	var secretFile string
 	flag.CommandLine.SetOutput(os.Stderr)
+	flag.BoolVar(&showVersion, "version", false, "print version and exit")
 	flag.StringVar(&role, "peer", "", `role of peer: a or b
 if peer not specified, we run in control mode`)
 	flag.StringVar(&secret, "secret", "", "shared secret to sign messages")
@@ -57,6 +59,17 @@ Peer mode (run in private network, peer a):
 
 	flag.Parse()
 
+	if secretFile != "" {
+		s, err := ioutil.ReadFile(secretFile)
+		if err != nil {
+			return err
+		}
+		secret = string(s)
+	}
+	return nil
+}
+
+func checkFlags() error {
 	messages := []string(nil)
 	switch role {
 	case "a", "b":
@@ -69,14 +82,6 @@ Peer mode (run in private network, peer a):
 		}
 	default:
 		messages = append(messages, fmt.Sprintf("invalid role: %q", role))
-	}
-	if secretFile != "" {
-		s, err := ioutil.ReadFile(secretFile)
-		if err != nil {
-			messages = append(messages, fmt.Sprintf("cannot read secret from file %s: %s", secretFile, err.Error()))
-		} else {
-			secret = string(s)
-		}
 	}
 	if secret == "" {
 		messages = append(messages, "you have to specify secret")
@@ -121,6 +126,12 @@ func printResult(laddr, addr *net.UDPAddr) {
 
 func main() {
 	helpAndExitIfError(setupFlags())
+	if showVersion {
+		fmt.Println(version)
+		return
+	}
+
+	helpAndExitIfError(checkFlags())
 
 	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
 	opts := app.ConnOption(
