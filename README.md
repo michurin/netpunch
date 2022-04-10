@@ -1,5 +1,7 @@
 # Network hole punching tool
 
+[![build](https://github.com/michurin/netpunch/actions/workflows/ci.yaml/badge.svg)](https://github.com/michurin/netpunch/actions/workflows/ci.yaml)
+
 Netpunch is a tool to establishes network connections between nodes which are behind NATs and firewalls.
 
 Netpunch has to be run on one *control* node with public IP address and on two *peer*-nodes from private networks.
