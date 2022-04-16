@@ -1,11 +1,12 @@
-package app
+package netpunchlib
 
 import (
 	"bytes"
+	"context"
 	"net"
 )
 
-func Server(address string, options ...Option) error {
+func Server(ctx context.Context, address string, options ...Option) error {
 	config := newConfig(options...)
 	addr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
@@ -16,32 +17,48 @@ func Server(address string, options ...Option) error {
 		return err
 	}
 	conn := config.wrapConnection(udpConn)
-	defer conn.Close()
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()     // we must to cancel first
+		conn.Close() // will be closed synchronously
+	}()
+
+	serverDataChan := make(chan receivedMessage)
+	serverErrChan := make(chan error)
+
+	go serve(ctx, conn, serverDataChan, serverErrChan)
 
 	addresses := [][]byte{nil, nil}
 
 	for {
-		data := make([]byte, 1024) // we create new slice every time to prevent sharing memory between server and handler
-		n, addr, err := conn.ReadFromUDP(data)
-		if err != nil {
-			continue
-		}
-		if n <= 0 {
-			continue
-		}
-		idx := int(data[0]) & 1
-		addresses[idx] = bytes.Join([][]byte{
-			{labelPeerInfo},
-			data[:1],
-			[]byte(addr.String()),
-		}, []byte{labelsSeporator})
-		payload := addresses[idx^1]
-		if payload == nil {
-			continue
-		}
-		_, err = conn.WriteToUDP(payload, addr)
-		if err != nil {
-			continue
+		select {
+		case data := <-serverDataChan:
+			if len(data.message) != 1 {
+				continue
+			}
+			switch data.message[0] {
+			case 'a', 'b':
+			default:
+				continue
+			}
+			idx := int(data.message[0]) & 1
+			addresses[idx] = bytes.Join([][]byte{
+				{labelPeerInfo},
+				data.message[:1],
+				[]byte(data.addr.String()),
+			}, []byte{labelsSeporator})
+			payload := addresses[idx^1]
+			if payload == nil {
+				continue
+			}
+			_, err = conn.WriteToUDP(payload, data.addr)
+			if err != nil {
+				continue
+			}
+		case err := <-serverErrChan:
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

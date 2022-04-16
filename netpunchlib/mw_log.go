@@ -1,26 +1,36 @@
-package app
+package netpunchlib
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
+	"sync/atomic"
 )
 
 type logWrapper struct {
-	next Connenction
-	log  *log.Logger
+	next     Connection
+	log      *log.Logger
+	isClosed *int32
 }
 
-func LogMW(log *log.Logger) MW {
-	return func(conn Connenction) Connenction {
+func LoggingMiddleware(log *log.Logger) ConnectionMiddleware {
+	return func(conn Connection) Connection {
 		return &logWrapper{
-			next: conn,
-			log:  log,
+			next:     conn,
+			log:      log,
+			isClosed: new(int32),
 		}
 	}
 }
 
 func (w *logWrapper) err(area string, err error) {
+	if atomic.AddInt32(w.isClosed, 0) != 0 {
+		opErr := (*net.OpError)(nil)
+		if errors.As(err, &opErr) {
+			return // skip errors after closing
+		}
+	}
 	w.log.Print(fmt.Sprintf("[error] %s: %s", area, err.Error()))
 }
 
@@ -29,6 +39,7 @@ func (w *logWrapper) info(area, msg string) {
 }
 
 func (w *logWrapper) Close() error {
+	atomic.AddInt32(w.isClosed, 1) // oh. slightly too early
 	err := w.next.Close()
 	if err != nil {
 		w.err("close", err)

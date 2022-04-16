@@ -2,12 +2,27 @@ linters:
   enable-all: true
   disable:
     - wrapcheck
-    - varnamelen
     - paralleltest
     - gomnd
     - wsl
     - nlreturn
     - goerr113
+    - gci
+      # disabled in golangci-lint v1.45.2 due to 1.18
+    - bodyclose
+    - contextcheck
+    - gosimple
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - tparallel
+    - unparam
+    - wastedassign
+    - unused
       # deprecated
     - interfacer
     - maligned
@@ -16,7 +31,17 @@ linters:
 
 linters-settings:
   cyclop:
-    max-complexity: 12
+    max-complexity: 20
+  funlen:
+    lines: 100
+  gocognit:
+    min-complexity: 40
+  lll:
+    line-length: 160
+  goimports:
+    local-prefixes: github.com/michurin/netpunch
+  varnamelen:
+    max-distance: 16
 
 issues:
   exclude-rules:
