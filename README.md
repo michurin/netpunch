@@ -34,6 +34,10 @@ Basically, you have to do three things:
 
 ## Development and contribution
 
+### Key ideas
+
+TODO
+
 ### Local running
 
 Terminal 1: control node
@@ -95,19 +99,17 @@ LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: :5001 n/a 5001 127.0.0.1:5000 127.0.0.1 500
 ### Roadmap
 
 - Threat this staff as a library
-  - Graceful shutdown: rewrite code in standard `http` lib style: synchronous `ListenAndServe`- and `Shutdown`-like methods
   - Docs
   - Code coverage
-  - Vanish all TODOs
 - CI (setup github actions):
   - lint
   - test
 
 ### Known issues
 
-- The same private network: netpunch won't work if both peer are sitting behind the same NAT
-- Nobody yet knows whether netpunch works on MS Windows. Please, let me know, if you do
-- If secrets are mismatched it appears like a fake message with corresponding error. Slightly ugly
+- The same private network: in some cases, netpunch won't work if both peers are sitting behind the same NAT
+- MS Windows: nobody yet knows whether netpunch works on MS Windows. Please, let me know, if you do
+- Not perfect diagnostics in case secrets mismatched: if secrets are mismatched it appears like a fake message with corresponding error. Slightly hackish and ugly
 
 ### Internals
 

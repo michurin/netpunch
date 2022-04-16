@@ -24,8 +24,8 @@ const (
 
 var modes = map[int]modeInfo{ //nolint:gochecknoglobals
 	modeDiscovering: {
-		retrys:  1,
-		delay:   time.Second,
+		retrys:  5,
+		delay:   100 * time.Millisecond,
 		message: nil,
 	},
 	modePinging: {
@@ -81,12 +81,14 @@ func processor(
 		}
 		select {
 		case <-time.After(minfo.delay):
-			if tryCount >= minfo.retrys {
-				if mode == modeClosing {
+			if tryCount >= minfo.retrys { // perform transition if count of tries exhausted
+				switch mode { // sort of FSM transition table
+				case modeClosing:
 					addrChan <- peerAddr
 					return
-				}
-				if mode != modeDiscovering { // stay in discovering mode
+				case modeSleeping:
+					mode = modeDiscovering
+				default:
 					mode = modeSleeping
 				}
 				tryCount = 0
