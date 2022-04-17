@@ -38,7 +38,33 @@ Basically, you have to do three things:
 
 ### Key ideas
 
-TODO
+Let me share the key ideas of this project, before you start deep refactoring of it.
+
+I regard this project as *library* `netpunchlib` and CLI tool, that uses this library.
+
+I believe the library is to do what it has to do only. It means:
+
+- It must be safe and free of goroutines leaking and stuff like that
+- It must not produce any side effects, including logging. You still able to do things like logging, using middleware
+- It must have compact interface
+- It must provide full control and hide all internals
+
+I'm thinking of CLI tool and `main.go` as an example of using this library. It shows clean example of
+
+- logging (how to create your custom middleware)
+- initialization
+- shutting down
+
+And I wonder to keep it pure and simple. For this reason, for example, I don't use
+thing like [cobra](https://github.com/spf13/cobra).
+
+If you wish to extremely improve CLI/UI/UX... if you want to extend functionality of CLI tool, to add more abilities...
+won't you just consider creating your own project and using `netpunchlib` as a part of it? I, for my part,
+will be happy to help you to adjust `netpunchlib` for your needs.
+
+But on the contrary, if you find error in library, if you find leaks, misfeatures, inconvenient things,
+if you find typos, if you want to improve scripts like `build.sh`, if you know how to make examples better,
+your pull requests are welcome! However, if you are thinking about grand redevelopment, please open issues first.
 
 ### Local running
 
