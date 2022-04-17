@@ -49,3 +49,4 @@ issues:
       linters:
         - gochecknoinits
         - gochecknoglobals
+        - forbidigo

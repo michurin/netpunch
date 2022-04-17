@@ -121,8 +121,7 @@ func safeIP(ip net.IP) string {
 }
 
 func printResult(laddr, addr *net.UDPAddr) {
-	fmt.Fprintln(
-		os.Stdout,
+	fmt.Println(
 		"LADDR/LHOST/LPORT/RADDR/RHOST/RPORT:",
 		laddr,
 		safeIP(laddr.IP),
@@ -142,7 +141,7 @@ func logWriter() io.Writer {
 func connectionOptions(loggingMiddleware, signingMiddleware netpunchlib.ConnectionMiddleware) netpunchlib.Option {
 	if rawMode {
 		return netpunchlib.ConnOption(loggingMiddleware, signingMiddleware) // put logging first
-	} else {
+	} else { //nolint:revive
 		return netpunchlib.ConnOption(signingMiddleware, loggingMiddleware) // put logging last
 	}
 }
