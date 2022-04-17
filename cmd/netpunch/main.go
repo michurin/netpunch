@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -28,6 +29,8 @@ var (
 	remoteAddr  string
 	localAddr   string
 	showVersion bool
+	silentMode  bool
+	rawMode     bool
 )
 
 func init() {
@@ -40,6 +43,8 @@ func setupFlags() error {
 	var secretFile string
 	flag.CommandLine.SetOutput(os.Stderr)
 	flag.BoolVar(&showVersion, "version", false, "print version and exit")
+	flag.BoolVar(&silentMode, "silent", false, "silent mode")
+	flag.BoolVar(&rawMode, "raw-logging", false, "log raw messages, including cryptography signatures")
 	flag.StringVar(&role, "peer", "", `role of peer: a or b
 if peer not specified, we run in control mode`)
 	flag.StringVar(&secret, "secret", "", "shared secret to sign messages")
@@ -127,6 +132,21 @@ func printResult(laddr, addr *net.UDPAddr) {
 		addr.Port)
 }
 
+func logWriter() io.Writer {
+	if silentMode {
+		return ioutil.Discard
+	}
+	return os.Stderr
+}
+
+func connectionOptions(loggingMiddleware, signingMiddleware netpunchlib.ConnectionMiddleware) netpunchlib.Option {
+	if rawMode {
+		return netpunchlib.ConnOption(loggingMiddleware, signingMiddleware) // put logging first
+	} else {
+		return netpunchlib.ConnOption(signingMiddleware, loggingMiddleware) // put logging last
+	}
+}
+
 func main() {
 	helpAndExitIfError(setupFlags())
 	if showVersion {
@@ -136,7 +156,7 @@ func main() {
 
 	helpAndExitIfError(checkFlags())
 
-	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
+	logger := log.New(logWriter(), "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lmsgprefix)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -150,20 +170,19 @@ func main() {
 		cancel()
 	}()
 
-	opts := netpunchlib.ConnOption(
-		// netpunchlib.LoggingMiddleware(logger), // uncomment this if you like to see full debugging including signatores
-		netpunchlib.SigningMiddleware([]byte(secret)),
-		netpunchlib.LoggingMiddleware(logger))
+	connOption := connectionOptions(
+		netpunchlib.LoggingMiddleware(logger),
+		netpunchlib.SigningMiddleware([]byte(secret)))
 
 	if role == "" {
 		logger.SetPrefix(fmt.Sprintf("[%d] ", os.Getpid()))
 		logger.Print("[info] Start in control mode on " + localAddr)
-		err := netpunchlib.Server(ctx, localAddr, opts)
+		err := netpunchlib.Server(ctx, localAddr, connOption)
 		helpAndExitIfError(err)
 	} else {
 		logger.SetPrefix(fmt.Sprintf("[%d] [%s] ", os.Getpid(), role))
 		logger.Print("[info] Start in peer mode on " + localAddr + " to server at " + remoteAddr)
-		laddr, addr, err := netpunchlib.Client(ctx, role, localAddr, remoteAddr, opts) // btw, abstraction leaking (role: arg->payload)
+		laddr, addr, err := netpunchlib.Client(ctx, role, localAddr, remoteAddr, connOption) // btw, abstraction leaking (role: arg->payload)
 		helpAndExitIfError(err)
 		printResult(laddr, addr)
 	}
