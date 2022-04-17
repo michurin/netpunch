@@ -30,7 +30,7 @@ func TestWriteToUDP_ok(t *testing.T) {
 	defer ctrl.Finish()
 
 	m := mock.NewMockConnection(ctrl)
-	m.EXPECT().WriteToUDP([]byte("@9d*O[`bg>M-oOn?)ikhf%&gWemV?-5#T/G data"), nil).Return(40, nil)
+	m.EXPECT().WriteToUDP([]byte(`VS2/W:Yo^Bl5K]QY&_nAD;I>W!Xe!?PY"r>0pm"S data`), nil).Return(45, nil) // 45=40+1+4
 
 	conn := netpunchlib.SigningMiddleware([]byte("MORN"))(m)
 	n, err := conn.WriteToUDP([]byte("data"), nil)
@@ -44,7 +44,7 @@ func TestWriteToUDP_error(t *testing.T) {
 	defer ctrl.Finish()
 
 	m := mock.NewMockConnection(ctrl)
-	m.EXPECT().WriteToUDP([]byte("@9d*O[`bg>M-oOn?)ikhf%&gWemV?-5#T/G data"), nil).Return(0, errors.New("TestErr"))
+	m.EXPECT().WriteToUDP([]byte(`VS2/W:Yo^Bl5K]QY&_nAD;I>W!Xe!?PY"r>0pm"S data`), nil).Return(0, errors.New("TestErr"))
 
 	conn := netpunchlib.SigningMiddleware([]byte("MORN"))(m)
 	n, err := conn.WriteToUDP([]byte("data"), nil)
@@ -59,8 +59,9 @@ func TestReadFromUDP_ok(t *testing.T) {
 
 	m := mock.NewMockConnection(ctrl)
 	m.EXPECT().ReadFromUDP(gomock.Any()).DoAndReturn(func(b []byte) (int, *net.UDPAddr, error) {
-		copy(b, []byte("@9d*O[`bg>M-oOn?)ikhf%&gWemV?-5#T/G data"))
-		return 40, nil, nil
+		n := copy(b, []byte(`VS2/W:Yo^Bl5K]QY&_nAD;I>W!Xe!?PY"r>0pm"S data`))
+		assert.Equal(t, 45, n)
+		return 45, nil, nil
 	})
 
 	conn := netpunchlib.SigningMiddleware([]byte("MORN"))(m)

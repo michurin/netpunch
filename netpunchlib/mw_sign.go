@@ -1,9 +1,10 @@
 package netpunchlib
 
 import (
-	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/ascii85"
+	"fmt"
 	"net"
 )
 
@@ -25,7 +26,7 @@ func (w *signWrapper) Close() error {
 	return w.next.Close()
 }
 
-var signLen = ascii85.MaxEncodedLen(sha256.Size224) //nolint:gochecknoglobals
+var signLen = ascii85.MaxEncodedLen(32) //nolint:gochecknoglobals
 
 func (w *signWrapper) ReadFromUDP(b []byte) (int, *net.UDPAddr, error) {
 	buff := make([]byte, len(b)+signLen+1)
@@ -36,29 +37,50 @@ func (w *signWrapper) ReadFromUDP(b []byte) (int, *net.UDPAddr, error) {
 	if n < signLen+2 {
 		return copy(b, []byte("[message skipped, since it is too short]")), addr, nil // data too short, pretentd it is no data
 	}
-	sum := w.sum(buff[signLen+1 : n])
-	if !bytes.Equal(sum, buff[:signLen]) {
+	sum, err := w.sum(buff[signLen+1 : n])
+	if err != nil {
+		return n, addr, err // consider summing errors as fatal, they most likely refer to errors in code
+	}
+	if !hmac.Equal(sum, buff[:signLen]) { // do not use bytes.Equal, beware time leaking and timing attacks :)
 		return copy(b, []byte("[message skipped due to invalid signature]")), addr, nil // invalid signature, pretend it is no data
 	}
 	return copy(b, buff[signLen+1:n]), addr, nil
 }
 
 func (w *signWrapper) WriteToUDP(b []byte, addr *net.UDPAddr) (int, error) {
-	m := len(b)
-	buff := make([]byte, m+signLen+1)
-	copy(buff, w.sum(b))
-	buff[signLen] = 32
-	copy(buff[signLen+1:], b)
-	n, err := w.next.WriteToUDP(buff, addr)
+	inputLen := len(b)
+	buff := make([]byte, inputLen+signLen+1)
+	sum, err := w.sum(b)
 	if err != nil {
-		return n, err
+		return 0, err
 	}
-	return m, nil
+	if n := copy(buff, sum); n != signLen {
+		return 0, fmt.Errorf("impossible sum coping error: len=%d", n)
+	}
+	buff[signLen] = 32
+	if n := copy(buff[signLen+1:], b); n != inputLen {
+		return 0, fmt.Errorf("impossible data coping error: len=%d", n)
+	}
+	_, err = w.next.WriteToUDP(buff, addr)
+	if err != nil {
+		return 0, err
+	}
+	return inputLen, nil // return m to pretend we wrote given data
 }
 
-func (w *signWrapper) sum(data []byte) []byte {
-	sum := sha256.Sum224(append(w.secret, data...))
-	enc := make([]byte, 35)
-	ascii85.Encode(enc, sum[:])
-	return enc
+func (w *signWrapper) sum(data []byte) ([]byte, error) {
+	mac := hmac.New(sha256.New, w.secret)
+	if _, err := mac.Write(data); err != nil {
+		return nil, err
+	}
+	sum := mac.Sum(nil)
+	if len(sum) != 32 {
+		return nil, fmt.Errorf("impossible summing error: len=%d", len(sum))
+	}
+	enc := make([]byte, signLen)
+
+	if n := ascii85.Encode(enc, sum); n != signLen {
+		return nil, fmt.Errorf("impossible encoding error: len=%d", len(sum))
+	}
+	return enc, nil
 }
