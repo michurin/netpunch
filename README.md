@@ -124,6 +124,13 @@ Terminal 3 (peer B):
 LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: :5001 n/a 5001 127.0.0.1:5000 127.0.0.1 5000
 ```
 
+It is easy to understand this log messages. The first letter shows the type of message:
+- `a` and `b` announce corresponding peer on control host
+- `i` (with additional data) is an information on opposite peer from control node
+- `x` is "ping" (can be seen as SYN)
+- `y` is "pong" (can be seen as SYN+ACK)
+- `z` is "close" (can be seen as ACK)
+
 ### Roadmap
 
 - Threat this staff as a library
