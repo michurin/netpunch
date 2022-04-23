@@ -192,5 +192,13 @@ final phase, when we send all CLOSE packets, is similar to TIME-WAIT.
 
 ### Related links
 
+#### Documentation
+
 - [Peer-to-Peer Communication Across Network Address Translators](https://bford.info/pub/net/p2pnat/): fundamental work on P2P drilling
 - [Setup OpenVPN](https://ubuntu.com/server/docs/service-openvpn)
+
+#### Similar projects
+
+- <https://github.com/yinheli/udppunch>
+- <https://github.com/malcolmseyd/natpunch-go>
+- <https://git.zx2c4.com/wireguard-tools/tree/contrib/nat-hole-punching/>
