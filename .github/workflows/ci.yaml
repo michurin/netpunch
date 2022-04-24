@@ -22,3 +22,15 @@ jobs:
       - run: "test ! -e netpunch"
       - run: "./build.sh -b"
       - run: "test -e netpunch"
+  test:
+    runs-on: ubuntu-latest
+    name: "Test and lint"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.18"
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: "v1.45"
+      - run: "go test ./..."
