@@ -162,12 +162,8 @@ It is easy to understand this log messages. The first letter shows the type of m
 
 ### Roadmap
 
-- Threat this staff as a library
-  - Docs
-  - Code coverage
-- CI (setup github actions):
-  - lint
-  - test
+- Docs
+- More tests and code coverage
 
 ### Known issues
 
