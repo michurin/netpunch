@@ -14,6 +14,35 @@ However, the netpunch provides at least three advantages:
 - You do not need additional tools like `tcpdump`, `awk` etc, or additional libs
 - All network interactions are protected by signature. So it is difficult to abuse your control node
 
+## How does it work
+
+Here is a slightly oversimplified flow
+
+```mermaid
+flowchart TB
+subgraph Internet
+    direction LR
+    subgraph Privat network A
+        A[Peer A\nbehind NATs\nand firewalls]
+    end
+    C[Control node\nwith public IP and\nopenned UDP port]
+    A-->|Step 1:\nAnnonce public address\nof node A|C
+    B-->|Step 2:\nAnnonce public address\nof node B|C
+    C-->|Stop 3:\nObtain public address\nof node A|B
+    B-->|Step 4:\nStart punching to peer A\nby its public address|A
+    A-.->|Step 5:\nNext try\nof step 1|C
+    C-.->|Step 6:\nObtain public address\nof peer B|A
+    A-.->|Step 7:\nStart punching to peer B\nby its public address|B
+    subgraph Privat network B
+        B[Peer B\nbehind NATs\nand firewalls]
+    end
+end
+```
+
+Each peer from private networks reaches public control node. Control node saves
+public addresses of peers and makes them able to know public addresses of each other.
+So peers from private networks become able to start punching towards each other.
+
 ## Quick start with OpenVPN
 
 ### Install binaries
