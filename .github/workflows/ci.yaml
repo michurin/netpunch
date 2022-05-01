@@ -33,4 +33,8 @@ jobs:
       - uses: golangci/golangci-lint-action@v3
         with:
           version: "v1.45"
-      - run: "go test ./..."
+      - run: "go test -v -race -coverprofile=coverage.txt -covermode=atomic ./netpunchlib/..."
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.txt
+          verbose: true
