@@ -16,7 +16,7 @@ However, the netpunch provides at least three advantages:
 
 ## How does it work
 
-Here is a slightly oversimplified flow
+Here is a slightly oversimplified flow. Boxes are nodes and network areas, arrows are UDP messages.
 
 ```mermaid
 flowchart TB
