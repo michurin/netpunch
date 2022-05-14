@@ -28,7 +28,7 @@ func Server(ctx context.Context, address string, options ...Option) error {
 
 	go serve(ctx, conn, serverDataChan, serverErrChan)
 
-	addresses := [][]byte{nil, nil}
+	addresses := make([][]byte, 26)
 
 	for {
 		select {
@@ -36,12 +36,11 @@ func Server(ctx context.Context, address string, options ...Option) error {
 			if len(data.message) != 1 {
 				continue
 			}
-			switch data.message[0] {
-			case 'a', 'b':
-			default:
+			slot := data.message[0]
+			if slot < 'a' || slot > 'z' {
 				continue
 			}
-			idx := int(data.message[0]) & 1
+			idx := int(slot - 'a')
 			addresses[idx] = bytes.Join([][]byte{
 				{labelPeerInfo},
 				data.message[:1],

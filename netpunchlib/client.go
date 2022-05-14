@@ -127,11 +127,22 @@ func processor(
 	}
 }
 
-func Client(ctx context.Context, slot, address, remoteAddress string, opt ...Option) (*net.UDPAddr, *net.UDPAddr, error) {
-	if slot != "a" && slot != "b" {
-		return nil, nil, fmt.Errorf("invalid slot (role): %s", slot)
+func buildMessage(s string) ([]byte, error) {
+	m := []byte(s)
+	if len(m) != 1 {
+		return nil, fmt.Errorf("invalid slot (role): %q", s)
 	}
-	message := []byte(slot)
+	if m[0] < 'a' || m[0] > 'z' {
+		return nil, fmt.Errorf("invalid slot (role): %q", s)
+	}
+	return m, nil
+}
+
+func Client(ctx context.Context, slot, address, remoteAddress string, opt ...Option) (*net.UDPAddr, *net.UDPAddr, error) {
+	message, err := buildMessage(slot)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	config := newConfig(opt...)
 
