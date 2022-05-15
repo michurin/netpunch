@@ -29,6 +29,7 @@ linters:
     - scopelint
     - golint
     - exhaustivestruct # since v1.46.0
+    - execinquery # panics in v1.46.1; the fix is merged https://github.com/lufeee/execinquery/pull/13
 
 linters-settings:
   cyclop:
