@@ -28,6 +28,7 @@ linters:
     - maligned
     - scopelint
     - golint
+    - exhaustivestruct # since v1.46.0
 
 linters-settings:
   cyclop:
