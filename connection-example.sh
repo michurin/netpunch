@@ -6,7 +6,7 @@ set -x # Remove to disable debugging
 
 ## SETTINGS
 
-# Assume we start server on the host michurin.net by the command like that:
+# Assume we start server on the host you-host-with-public-ip.net by the command like that:
 # netpunch -secret x -local :10001
 # You have to open this port. For example by iptables rule:
 # -A INPUT -p udp -m udp --dport 10001 -j ACCEPT
