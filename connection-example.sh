@@ -20,6 +20,8 @@ SECRET='Secret'
 LPORT='10000'
 
 # On B node you have to set ROLE=b and swap values of LOCALIP and REMOTEIP
+# By the way, you are able to pair more nodes using the same control node
+# just use roles c and d, e and f and so on up to y and z
 ROLE='a'
 LOCALIP='192.168.2.1' # Of cause you are free to use and IP like 10.8.8.8 etc.
 REMOTEIP='192.168.2.2'
