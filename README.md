@@ -170,6 +170,7 @@ It is easy to understand this log messages. The first letter shows the type of m
 - The same private network: in some cases, netpunch won't work if both peers are sitting behind the same NAT
 - MS Windows: nobody yet knows whether netpunch works on MS Windows. Please, let me know, if you do
 - Not perfect diagnostics in case secrets mismatched: if secrets are mismatched it appears like a fake message with corresponding error. Slightly hackish and ugly
+- Client-client protocol is extremely simple: according to the design you are able to link `a` and `b`, `c` and `d` and so on. However if `a` and `c` have the same address and port (by accident) you are able to connect `a` and `d`. Because client `d` can not distinguish `a` and `c`. It can confusing, but I don't think it gives grounds for ruining of simplicity of code and contract
 
 ### Internals
 

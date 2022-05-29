@@ -3,8 +3,10 @@ package netpunchlib_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -22,60 +24,77 @@ func TestRegularInteraction(t *testing.T) {
 	// - it doesn't check retries carefully
 	// - it is race conditions prone (however it doesn't ruin test)
 
-	ctlPeer := "127.0.0.1:10000"
-	peerA := "127.0.0.1:10001"
-	peerB := "127.0.0.1:10002"
+	// Settings
+
+	host := "127.0.0.1"
+	peers := 26
+	ctrlPort := 10000
+	peerBasePort := ctrlPort + 1
+
+	// Prepare
+
+	ctrlAddr := fmt.Sprintf("%s:%d", host, ctrlPort)
 
 	type result struct {
-		a   *net.UDPAddr
-		b   *net.UDPAddr
-		err error
+		role string
+		a    *net.UDPAddr
+		b    *net.UDPAddr
+		err  error
 	}
 
-	aDone := make(chan result, 1)
-	bDone := make(chan result, 1)
-	cDone := make(chan error, 1)
+	peerDone := make(chan result, peers)
+	ctrlDone := make(chan error, 1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // 5s is global test timeout; out of the blue
 	defer cancel()                                                          // force all agents to die
 
-	opt := netpunchlib.ConnOption(netpunchlib.LoggingMiddleware(log.Default())) // it would be great to write custom logger with t.Log
+	// Run
 
 	go func() {
-		cDone <- netpunchlib.Server(ctx, ctlPeer, opt)
+		ctrlDone <- netpunchlib.Server(ctx, ctrlAddr, opt("server"))
 	}()
-	go func() {
-		a, b, err := netpunchlib.Client(ctx, "a", peerA, ctlPeer, opt)
-		aDone <- result{a: a, b: b, err: err}
-	}()
-	go func() {
-		a, b, err := netpunchlib.Client(ctx, "b", peerB, ctlPeer, opt)
-		bDone <- result{a: a, b: b, err: err}
-	}()
+	for i := 0; i < peers; i++ {
+		go func(role, peerAddr string) {
+			a, b, err := netpunchlib.Client(ctx, role, peerAddr, ctrlAddr, opt("peer "+role))
+			peerDone <- result{role: role, a: a, b: b, err: err}
+		}(string(byte(i)+'a'), fmt.Sprintf("%s:%d", host, peerBasePort+i))
+	}
 
-	aCount := 0
-	bCount := 0
+	// Results collecting
+
+	results := map[string]result{} // we collect all results to be sure we don't have any duplicates or misses
 LOOP:
 	for {
 		select {
-		case err := <-cDone:
-			if errors.Is(err, context.Canceled) && aCount == 1 && bCount == 1 { // everything ok
+		case err := <-ctrlDone:
+			if errors.Is(err, context.Canceled) && len(results) == peers { // everything ok
 				break LOOP
 			}
 			t.Fatal(err) // anyway it is error
-		case res := <-aDone:
+		case res := <-peerDone:
 			require.NoError(t, res.err)
-			assert.Equal(t, 10001, res.a.Port)
-			assert.Equal(t, 10002, res.b.Port)
-			aCount++
-		case res := <-bDone:
-			require.NoError(t, res.err)
-			assert.Equal(t, 10002, res.a.Port)
-			assert.Equal(t, 10001, res.b.Port)
-			bCount++
+			_, ok := results[res.role]
+			require.False(t, ok)
+			results[res.role] = res
 		}
-		if aCount == 1 && bCount == 1 {
-			cancel() // stop server
+		if len(results) == peers {
+			cancel() // break loop by stopping server
 		}
 	}
+
+	// Asserts
+
+	for role, res := range results {
+		assert.Len(t, res.role, 1)
+		assert.Equal(t, res.role, role)
+		assert.NoError(t, res.err)
+		slotA := int([]byte(role)[0] - 'a')
+		slotB := slotA ^ 1
+		assert.Equal(t, peerBasePort+slotA, res.a.Port)
+		assert.Equal(t, peerBasePort+slotB, res.b.Port)
+	}
+}
+
+func opt(p string) netpunchlib.Option {
+	return netpunchlib.ConnOption(netpunchlib.LoggingMiddleware(log.New(os.Stderr, "["+p+"] ", 0)))
 }

@@ -45,7 +45,8 @@ func setupFlags() error {
 	flag.BoolVar(&showVersion, "version", false, "print version and exit")
 	flag.BoolVar(&silentMode, "silent", false, "silent mode")
 	flag.BoolVar(&rawMode, "raw-logging", false, "log raw messages, including cryptography signatures")
-	flag.StringVar(&role, "peer", "", `role of peer: a or b
+	flag.StringVar(&role, "peer", "", `role of peer: a-z
+it is linking a and b, c and d and so on up to y and z
 if peer not specified, we run in control mode`)
 	flag.StringVar(&secret, "secret", "", "shared secret to sign messages")
 	flag.StringVar(&secretFile, "secret-file", "", "get shared secret from file")
@@ -79,17 +80,11 @@ Peer mode (run in private network, peer a):
 
 func checkFlags() error {
 	messages := []string(nil)
-	switch role {
-	case "a", "b":
-		if remoteAddr == "" {
-			messages = append(messages, fmt.Sprintf("you have to specify remote address in peer mode role %q", role))
-		}
-	case "":
-		if remoteAddr != "" {
-			messages = append(messages, "you do not have to specify remote address in control mode")
-		}
-	default:
-		messages = append(messages, fmt.Sprintf("invalid role: %q", role))
+	if role == "" && remoteAddr != "" {
+		messages = append(messages, "you do not have to specify remote address in control mode")
+	}
+	if role != "" && remoteAddr == "" {
+		messages = append(messages, fmt.Sprintf("you have to specify remote address in peer mode role %q", role))
 	}
 	if secret == "" {
 		messages = append(messages, "you have to specify secret")
