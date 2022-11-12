@@ -12,8 +12,10 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
+	"text/template"
 
 	"github.com/michurin/netpunch/netpunchlib"
 )
@@ -21,7 +23,7 @@ import (
 var (
 	// go build -ldflags "-X main.gitCommit=$(git rev-list --abbrev-commit -1 HEAD)" ./cmd/...
 	gitCommit = ""
-	version   = "0.1" // tweaked in init
+	version   = "0.2" // tweaked in init
 
 	// CLI flags.
 	role        string
@@ -31,7 +33,10 @@ var (
 	showVersion bool
 	silentMode  bool
 	rawMode     bool
+	templateObj *template.Template // won't be nil after setupFlags()
 )
+
+const defaultTemplate = "LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: {{.LocalAddr}} {{.LocalIP}} {{.LocalPort}} {{.RemoteAddr}} {{.RemoteIP}} {{.RemotePort}}\n"
 
 func init() {
 	if gitCommit != "" {
@@ -40,7 +45,9 @@ func init() {
 }
 
 func setupFlags() error {
-	var secretFile string
+	var err error
+	var secretFile, templateFile, templateText string
+
 	flag.CommandLine.SetOutput(os.Stderr)
 	flag.BoolVar(&showVersion, "version", false, "print version and exit")
 	flag.BoolVar(&silentMode, "silent", false, "silent mode")
@@ -54,6 +61,8 @@ if peer not specified, we run in control mode`)
 	flag.StringVar(&localAddr, "local", "", `local address
 in control mode it is listening address
 in peer mode it is outgoing address`)
+	flag.StringVar(&templateFile, "template-file", "", "template file")
+	flag.StringVar(&templateText, "template", "", "template text")
 	defaultUsage := flag.Usage
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Version: %s\n", version)
@@ -64,18 +73,37 @@ Control mode (run at 2.3.3.3):
 Peer mode (run in private network, peer a):
         %[1]s -peer a -secret TheSecretWord -remote 2.3.3.3:7777 -local :1194
 `, path.Base(os.Args[0]))
+		fmt.Fprintf(flag.CommandLine.Output(), "Default template is:\n        %s\n", defaultTemplate)
 	}
 
 	flag.Parse()
 
-	if secretFile != "" {
-		s, err := ioutil.ReadFile(secretFile)
+	secret, err = readFile(secretFile, secret)
+	if err != nil {
+		return err
+	}
+	if templateText == "" {
+		templateText, err = readFile(templateFile, defaultTemplate)
 		if err != nil {
 			return err
 		}
-		secret = string(s)
+	}
+	templateObj, err = template.New("main").Parse(templateText)
+	if err != nil {
+		return err
 	}
 	return nil
+}
+
+func readFile(fn, def string) (string, error) {
+	if fn == "" {
+		return def, nil
+	}
+	s, err := ioutil.ReadFile(fn)
+	if err != nil {
+		return "", err
+	}
+	return string(s), nil
 }
 
 func checkFlags() error {
@@ -115,15 +143,22 @@ func safeIP(ip net.IP) string {
 	}
 }
 
-func printResult(laddr, addr *net.UDPAddr) {
-	fmt.Println(
-		"LADDR/LHOST/LPORT/RADDR/RHOST/RPORT:",
-		laddr,
-		safeIP(laddr.IP),
-		laddr.Port,
-		addr,
-		safeIP(addr.IP),
-		addr.Port)
+func printResult(laddr, addr *net.UDPAddr) error {
+	return templateObj.Execute(os.Stdout, struct {
+		LocalAddr  string
+		LocalIP    string
+		LocalPort  string
+		RemoteAddr string
+		RemoteIP   string
+		RemotePort string
+	}{
+		LocalAddr:  laddr.String(),
+		LocalIP:    safeIP(laddr.IP),
+		LocalPort:  strconv.Itoa(laddr.Port),
+		RemoteAddr: addr.String(),
+		RemoteIP:   safeIP(addr.IP),
+		RemotePort: strconv.Itoa(addr.Port),
+	})
 }
 
 func logWriter() io.Writer {
@@ -160,7 +195,7 @@ func main() {
 	go func() {
 		sig := <-exit
 		sigID, _ := sig.(syscall.Signal)
-		logger.Print(fmt.Sprintf("[info] Shutting down due to signal: %s (0x%02X)", sig.String(), int(sigID)))
+		logger.Printf("[info] Shutting down due to signal: %s (0x%02X)", sig.String(), int(sigID))
 		cancel()
 	}()
 
@@ -178,6 +213,6 @@ func main() {
 		logger.Print("[info] Start in peer mode on " + localAddr + " to server at " + remoteAddr)
 		laddr, addr, err := netpunchlib.Client(ctx, role, localAddr, remoteAddr, connOption) // btw, abstraction leaking (role: arg->payload)
 		helpAndExitIfError(err)
-		printResult(laddr, addr)
+		helpAndExitIfError(printResult(laddr, addr))
 	}
 }
