@@ -3,18 +3,21 @@ package netpunchlib
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"sync/atomic"
 )
 
+type logInterface interface {
+	Print(v ...interface{})
+}
+
 type logWrapper struct {
 	next     Connection
-	log      *log.Logger
+	log      logInterface
 	isClosed *int32
 }
 
-func LoggingMiddleware(log *log.Logger) ConnectionMiddleware {
+func LoggingMiddleware(log logInterface) ConnectionMiddleware {
 	return func(conn Connection) Connection {
 		return &logWrapper{
 			next:     conn,
