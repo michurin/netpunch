@@ -1,3 +1,5 @@
+run:
+  go: '1.17' # https://github.com/golangci/golangci-lint/issues/2649
 linters:
   enable-all: true
   disable:
@@ -6,30 +8,21 @@ linters:
     - gomnd
     - wsl
     - nlreturn
-    - goerr113
-    - gci
+    - goerr113 # TODO: has to be turned on
       # disabled in golangci-lint v1.45.2 due to 1.18
-    - bodyclose
     - contextcheck
-    - gosimple
-    - nilerr
-    - noctx
-    - rowserrcheck
-    - sqlclosecheck
-    - staticcheck
-    - structcheck
-    - stylecheck
-    - tparallel
-    - unparam
-    - wastedassign
-    - unused
+    - staticcheck # TODO: has to be turned on
       # deprecated
     - interfacer
     - maligned
     - scopelint
     - golint
     - exhaustivestruct # since v1.46.0
-    - execinquery # panics in v1.46.1; the fix is merged https://github.com/lufeee/execinquery/pull/13
+    - varcheck # since v1.49.0
+    - nosnakecase # since v1.48.1
+    - deadcode # since v1.49.0
+    - structcheck # since v1.49.0
+    - ifshort # since v1.48.0
 
 linters-settings:
   cyclop:
@@ -44,6 +37,11 @@ linters-settings:
     local-prefixes: github.com/michurin/netpunch
   varnamelen:
     max-distance: 16
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/michurin/netpunch/netpunchlib)
 
 issues:
   exclude-rules:
