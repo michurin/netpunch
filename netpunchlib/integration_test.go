@@ -27,7 +27,7 @@ func TestRegularInteraction(t *testing.T) {
 	// Settings
 
 	host := "127.0.0.1"
-	peers := 26
+	peers := 2 * 3 // has to be even
 	ctrlPort := 10000
 	peerBasePort := ctrlPort + 1
 
@@ -70,7 +70,7 @@ LOOP:
 			if errors.Is(err, context.Canceled) && len(results) == peers { // everything ok
 				break LOOP
 			}
-			t.Fatal(err) // anyway it is error
+			t.Fatal("len:", len(results), "peers:", peers, err) // anyway it is error
 		case res := <-peerDone:
 			require.NoError(t, res.err)
 			_, ok := results[res.role]
