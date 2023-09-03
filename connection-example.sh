@@ -71,3 +71,21 @@ do
         --ping 10 --ping-exit 40 \
         --verb 3
 done
+
+# By the way, you are free to rid of ugly manipulations with ${params}
+# and use templates (-template and -template-file options) and
+# OpenVPN configuration file like that:
+#
+# remote {{.RemoteIP}}
+# rport {{.RemotePort}}
+# lport {{.LocalPort}}
+# proto udp
+# dev tun
+# ifconfig 192.168.2.3 192.168.2.4
+# auth-nocache
+# auth SHA256
+# cipher AES-256-CBC
+# ping 10
+# ping-exit 40
+# verb 3
+# secret openvpn-secret.key

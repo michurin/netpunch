@@ -70,8 +70,10 @@ in peer mode it is outgoing address`)
 		fmt.Fprintf(flag.CommandLine.Output(), `Examples:
 Control mode (run at 2.3.3.3):
         %[1]s -secret TheSecretWord -local :7777
-Peer mode (run in private network, peer a):
+First peer: peer mode (run in private network, peer a):
         %[1]s -peer a -secret TheSecretWord -remote 2.3.3.3:7777 -local :1194
+Second peer: peer mode (run in private network, peer b):
+        %[1]s -peer b -secret TheSecretWord -remote 2.3.3.3:7777 -local :1194
 `, path.Base(os.Args[0]))
 		fmt.Fprintf(flag.CommandLine.Output(), "Default template is:\n        %s\n", defaultTemplate)
 	}
