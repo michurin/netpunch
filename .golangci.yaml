@@ -1,5 +1,3 @@
-run:
-  go: '1.17' # https://github.com/golangci/golangci-lint/issues/2649
 linters:
   enable-all: true
   disable:
@@ -8,6 +6,7 @@ linters:
     - gomnd
     - wsl
     - nlreturn
+    - depguard
     - goerr113 # TODO: has to be turned on
       # disabled in golangci-lint v1.45.2 due to 1.18
     - contextcheck
