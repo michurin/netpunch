@@ -87,7 +87,7 @@ LOOP:
 	for role, res := range results {
 		assert.Len(t, res.role, 1)
 		assert.Equal(t, res.role, role)
-		assert.NoError(t, res.err)
+		assert.NoError(t, res.err) //nolint:testifylint
 		slotA := int([]byte(role)[0] - 'a')
 		slotB := slotA ^ 1
 		assert.Equal(t, peerBasePort+slotA, res.a.Port)

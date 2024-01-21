@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/michurin/netpunch/netpunchlib"
 	"github.com/michurin/netpunch/netpunchlib/internal/mock"
@@ -22,7 +23,7 @@ func TestClose(t *testing.T) {
 	conn := netpunchlib.SigningMiddleware([]byte("MORN"))(m)
 	err := conn.Close()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestWriteToUDP_ok(t *testing.T) {
@@ -35,8 +36,8 @@ func TestWriteToUDP_ok(t *testing.T) {
 	conn := netpunchlib.SigningMiddleware([]byte("MORN"))(m)
 	n, err := conn.WriteToUDP([]byte("data"), nil)
 
+	require.NoError(t, err)
 	assert.Equal(t, 4, n)
-	assert.NoError(t, err)
 }
 
 func TestWriteToUDP_error(t *testing.T) {
@@ -50,7 +51,7 @@ func TestWriteToUDP_error(t *testing.T) {
 	n, err := conn.WriteToUDP([]byte("data"), nil)
 
 	assert.Equal(t, 0, n)
-	assert.Errorf(t, err, "TestErr")
+	assert.Errorf(t, err, "TestErr") //nolint:testifylint
 }
 
 func TestReadFromUDP_ok(t *testing.T) {
@@ -68,8 +69,8 @@ func TestReadFromUDP_ok(t *testing.T) {
 	buff := make([]byte, 1024)
 	n, addr, err := conn.ReadFromUDP(buff)
 
+	require.NoError(t, err)
 	assert.Equal(t, 4, n)
 	assert.Equal(t, []byte("data"), buff[:n])
 	assert.Nil(t, addr)
-	assert.NoError(t, err)
 }

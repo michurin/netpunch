@@ -8,6 +8,7 @@ linters:
     - nlreturn
     - depguard
     - goerr113 # TODO: has to be turned on
+    - inamedparam
       # disabled in golangci-lint v1.45.2 due to 1.18
     - contextcheck
     - staticcheck # TODO: has to be turned on
