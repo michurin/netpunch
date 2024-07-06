@@ -3,11 +3,11 @@ package netpunchlib
 import "net"
 
 type ConnectionReader interface {
-	ReadFromUDP([]byte) (int, *net.UDPAddr, error)
+	ReadFromUDP(data []byte) (int, *net.UDPAddr, error)
 }
 
 type ConnectionWriter interface {
-	WriteToUDP([]byte, *net.UDPAddr) (int, error)
+	WriteToUDP(data []byte, addr *net.UDPAddr) (int, error)
 }
 
 type ConnectionCloser interface {

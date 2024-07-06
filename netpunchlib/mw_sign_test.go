@@ -51,7 +51,7 @@ func TestWriteToUDP_error(t *testing.T) {
 	n, err := conn.WriteToUDP([]byte("data"), nil)
 
 	assert.Equal(t, 0, n)
-	assert.Errorf(t, err, "TestErr") //nolint:testifylint
+	assert.Errorf(t, err, "TestErr")
 }
 
 func TestReadFromUDP_ok(t *testing.T) {
