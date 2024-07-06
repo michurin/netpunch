@@ -1,30 +1,22 @@
 linters:
   enable-all: true
   disable:
-    - wrapcheck
-    - paralleltest
-    - gomnd
+      # nice to be turned on
     - wsl
     - nlreturn
-    - depguard
-    - goerr113 # TODO: has to be turned on
-    - inamedparam
-      # disabled in golangci-lint v1.45.2 due to 1.18
-    - contextcheck
-    - staticcheck # TODO: has to be turned on
+    - err113
+    - mnd
+    - wrapcheck
       # deprecated
-    - interfacer
-    - maligned
-    - scopelint
-    - golint
-    - exhaustivestruct # since v1.46.0
-    - varcheck # since v1.49.0
-    - nosnakecase # since v1.48.1
-    - deadcode # since v1.49.0
-    - structcheck # since v1.49.0
-    - ifshort # since v1.48.0
+    - gomnd
+    - execinquery
+      # disabled because the Go version
+    - copyloopvar
+    - intrange
 
 linters-settings:
+  paralleltest:
+    ignore-missing: true
   cyclop:
     max-complexity: 20
   funlen:
@@ -42,6 +34,23 @@ linters-settings:
       - standard
       - default
       - prefix(github.com/michurin/netpunch/netpunchlib)
+  depguard:
+    rules:
+      regular:
+        files:
+          - !$test
+        allow:
+          - $gostd
+          - github.com/michurin/netpunch/netpunchlib
+      tests:
+        files:
+          - $test
+        allow:
+          - $gostd
+          - github.com/michurin/netpunch/netpunchlib
+          - github.com/stretchr/testify/assert
+          - github.com/stretchr/testify/require
+          - github.com/golang/mock/gomock
 
 issues:
   exclude-rules:
