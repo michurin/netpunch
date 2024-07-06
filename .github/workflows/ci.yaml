@@ -37,8 +37,10 @@ jobs:
         with:
           version: "v1.59"
       - run: "go test -v -race -coverprofile=coverage.txt -covermode=atomic ./netpunchlib/..."
+      - run: "grep -v netpunchlib/internal/mock/connection.go coverage.txt >coverage-clean.txt"
+      - run: "rm coverage.txt" # otherwise it will be taken into account
       - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # required
-          files: ./coverage.txt
+          files: ./coverage-clean.txt
           verbose: true
