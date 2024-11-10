@@ -10,6 +10,7 @@ linters:
       # deprecated
     - gomnd
     - execinquery
+    - exportloopref
       # disabled because the Go version
     - copyloopvar
     - intrange

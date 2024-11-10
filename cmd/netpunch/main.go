@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -101,7 +100,7 @@ func readFile(fn, def string) (string, error) {
 	if fn == "" {
 		return def, nil
 	}
-	s, err := ioutil.ReadFile(fn)
+	s, err := os.ReadFile(fn)
 	if err != nil {
 		return "", err
 	}
@@ -165,7 +164,7 @@ func printResult(laddr, addr *net.UDPAddr) error {
 
 func logWriter() io.Writer {
 	if silentMode {
-		return ioutil.Discard
+		return io.Discard
 	}
 	return os.Stderr
 }
