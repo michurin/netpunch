@@ -8,8 +8,6 @@ linters:
     - mnd
     - wrapcheck
       # deprecated
-    - gomnd
-    - execinquery
     - exportloopref
       # disabled because the Go version
     - copyloopvar
