@@ -64,6 +64,62 @@ Basically, you have to do three things:
 - Start the script like `connection-example.sh` on peer A. Do not forget to generate `secret.key` file, as it shown in [connection-example.sh](connection-example.sh)
 - Start slightly edited `connection-example.sh` on peer B. You need to change A to B and swap IP addresses.
 
+### Setup systemd service
+
+You do not need root permissions or any extra software to start control node. You can just build binary:
+
+```sh
+./build.sh -b # see ./build.sh -h for more cross-compilation options
+scp netpunch root@${YOUR_REMOTE_NODE_WITH_PUBLIC_IP}:/usr/local/bin
+```
+
+And use service-file like this:
+
+```ini
+[Unit]
+Description=Network hole punching tool server
+Documentation=https://github.com/michurin/netpunch
+After=network.target nss-lookup.target
+
+[Service]
+User=nobody
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/netpunch -secret SECRET -local :10001
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+You can put this file to `/etc/systemd/system/netpunch.service`.
+
+Do not forget to do something like this:
+
+```sh
+systemctl daemon-reload
+systemctl status netpunch
+systemctl start netpunch
+systemctl enable netpunch
+journalctl -u netpunch -f
+```
+
+Now you can say on one peer
+
+```sh
+./netpunch -peer a -secret SECRET -local :5000 -remote ${CONTROL_NODE_IP}:10001
+```
+
+and similar command on another peer
+
+```sh
+./netpunch -peer b -secret SECRET -local :5000 -remote ${CONTROL_NODE_IP}:10001
+```
+
+> [!NOTE]
+> It has to be really *different* peer nodes in `CONTROL_NODE`'s perspective.
+
+More details and instructions for peer nodes setting are in [connection-example.sh](connection-example.sh).
+
 ## Development and contribution
 
 ### Key ideas
