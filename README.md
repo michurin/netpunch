@@ -64,7 +64,7 @@ Basically, you have to do three things:
 - Start the script like `connection-example.sh` on peer A. Do not forget to generate `secret.key` file, as it shown in [connection-example.sh](connection-example.sh)
 - Start slightly edited `connection-example.sh` on peer B. You need to change A to B and swap IP addresses.
 
-### Setup systemd service
+### Setup systemd service for server (control node)
 
 You do not need root permissions or any extra software to start control node. You can just build binary:
 
