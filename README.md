@@ -267,8 +267,8 @@ sequenceDiagram
 
 There are two phases:
 
-- IP discover, using server with public IP (200.2.2.2 on diagram) and
-- drilling, using PING-PONG-CLOSE communication
+- IP discover, using server with public IP (`4.4.4.4` on diagram) and
+- drilling, using `PING`-`PONG`-`CLOSE` communication
 
 The PING-PONG-CLOSE approach is very similar to SYN-SYNACK-ACK. The
 final phase, when we send all CLOSE packets, is similar to TIME-WAIT.
