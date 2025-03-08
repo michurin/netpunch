@@ -24,18 +24,18 @@ flowchart TB
 subgraph Internet
     direction LR
     subgraph Privat network A
-        A[Peer A\nbehind NATs\nand firewalls]
+        A[Peer A<br/>behind NATs<br/>and firewalls]
     end
-    C[Control node\nwith public IP and\nopenned UDP port]
-    A-->|Step 1:\nAnnonce public address\nof node A|C
-    B-->|Step 2:\nAnnonce public address\nof node B|C
-    C-->|Stop 3:\nObtain public address\nof node A|B
-    B-->|Step 4:\nStart punching to peer A\nby its public address|A
-    A-.->|Step 5:\nNext try\nof step 1|C
-    C-.->|Step 6:\nObtain public address\nof peer B|A
-    A-.->|Step 7:\nStart punching to peer B\nby its public address|B
+    C[Control node<br/>with public IP and<br/>openned UDP port]
+    A-->|Step 1:<br/>Annonce public address<br/>of node A|C
+    B-->|Step 2:<br/>Annonce public address<br/>of node B|C
+    C-->|Stop 3:<br/>Obtain public address<br/>of node A|B
+    B-->|Step 4:<br/>Start punching to peer A<br/>by its public address|A
+    A-.->|Step 5:<br/>Next try<br/>of step 1|C
+    C-.->|Step 6:<br/>Obtain public address<br/>of peer B|A
+    A-.->|Step 7:<br/>Start punching to peer B<br/>by its public address|B
     subgraph Privat network B
-        B[Peer B\nbehind NATs\nand firewalls]
+        B[Peer B<br/>behind NATs<br/>and firewalls]
     end
 end
 ```
