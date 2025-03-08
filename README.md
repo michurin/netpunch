@@ -233,17 +233,17 @@ It is easy to understand this log messages. The first letter shows the type of m
 
 ```mermaid
 sequenceDiagram
-    actor A as Node A<br/>192.168.0.1
-    participant GA as Gateway A<br/>1.1.1.1
-    participant S as Server<br/>200.4.4.4
-    participant GB as Gateway B<br/>2.2.2.2
-    actor B as Node B<br/>10.8.0.1
+    actor A as Node A<br/>192.168.0.10
+    participant GA as Gateway A<br/>priv: 192.168.0.1<br/>pub: 1.1.1.1
+    participant S as Server<br/>4.4.4.4
+    participant GB as Gateway B<br/>priv: 10.0.0.1<br/>pub: 2.2.2.2
+    actor B as Node B<br/>10.0.0.111
 
-    A ->> GA: from: 192.168.0.1:1001<br/>to: 200.2.2.2:1000
+    A ->> GA: from: 192.168.0.10:1001<br/>to: 4.4.4.4:1000
     GA ->> S: from: 1.1.1.1:X
     S ->> S: store 1.1.1.1:X<br/>(nothing to response yet)
 
-    B ->> GB: from: 10.8.0.1:1002<br/>to: 200.2.2.2:1000
+    B ->> GB: from: 10.0.0.111:1002<br/>to: 4.4.4.4:1000
     GB ->> S: from: 2.2.2.2:Y
     S ->> S: store 2.2.2.2:Y and response "1.1.1.1:X"
     S ->> B: data: "1.1.1.1:X"
