@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path"
 	"runtime/debug"
@@ -19,6 +20,8 @@ import (
 
 	"github.com/michurin/netpunch/netpunchlib"
 )
+
+const defaultTemplate = "LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: {{.LocalAddr}} {{.LocalIP}} {{.LocalPort}} {{.RemoteAddr}} {{.RemoteIP}} {{.RemotePort}}\n"
 
 var (
 	// go build -ldflags "-X main.gitCommit=$(git rev-list --abbrev-commit -1 HEAD)" ./cmd/...
@@ -34,9 +37,15 @@ var (
 	silentMode  bool
 	rawMode     bool
 	templateObj *template.Template // won't be nil after setupFlags()
+	command     string
+	commandArgs []cliArgument
 )
 
-const defaultTemplate = "LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: {{.LocalAddr}} {{.LocalIP}} {{.LocalPort}} {{.RemoteAddr}} {{.RemoteIP}} {{.RemotePort}}\n"
+type cliArgument struct {
+	template *template.Template // nil if it is raw string
+	raw      string
+	split    bool // have to be split after substitutions
+}
 
 func setupVersion() {
 	if bi, ok := debug.ReadBuildInfo(); ok {
@@ -64,8 +73,29 @@ if peer not specified, we run in control mode`)
 	flag.StringVar(&localAddr, "local", "", `local address
 in control mode it is listening address
 in peer mode it is outgoing address`)
-	flag.StringVar(&templateFile, "template-file", "", "template file")
-	flag.StringVar(&templateText, "template", "", "template text")
+	flag.StringVar(&templateFile, "template-file", "", "template file; see -template")
+	flag.StringVar(&templateText, "template", "", "template text; see -template-file")
+	flag.StringVar(&command, "command", "", "command to execute right after the hole gets ready;\nsee -arg, -fields and -raw")
+	flag.Func("arg", "specify argument to command; considered as template;\nsee -command, -template", func(v string) error {
+		t, err := template.New("main").Parse(v)
+		if err != nil {
+			return err
+		}
+		commandArgs = append(commandArgs, cliArgument{template: t}) //nolint:exhaustruct
+		return nil
+	})
+	flag.Func("fields", "specify space-separated command's arguments; considered as template;\nsee -command, -arg", func(v string) error {
+		t, err := template.New("main").Parse(v)
+		if err != nil {
+			return err
+		}
+		commandArgs = append(commandArgs, cliArgument{template: t, split: true}) //nolint:exhaustruct
+		return nil
+	})
+	flag.Func("raw", "like -arg, but without templates", func(v string) error {
+		commandArgs = append(commandArgs, cliArgument{raw: v}) //nolint:exhaustruct
+		return nil
+	})
 	defaultUsage := flag.Usage
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Version: %s\n", version)
@@ -78,7 +108,8 @@ First peer: peer mode (run in private network, peer a):
 Second peer: peer mode (run in private network, peer b):
         %[1]s -peer b -secret TheSecretWord -remote 2.3.3.3:7777 -local :1194
 `, path.Base(os.Args[0]))
-		fmt.Fprintf(flag.CommandLine.Output(), "Default template is:\n        %s\n", defaultTemplate)
+		fmt.Fprintf(flag.CommandLine.Output(), "Default template is:\n        %s\n", strings.TrimSpace(defaultTemplate))
+		fmt.Fprintln(flag.CommandLine.Output(), "Project home: https://github.com/michurin/netpunch")
 	}
 
 	flag.Parse()
@@ -148,22 +179,64 @@ func safeIP(ip net.IP) string {
 	}
 }
 
-func printResult(laddr, addr *net.UDPAddr) error {
-	return templateObj.Execute(os.Stdout, struct {
-		LocalAddr  string
-		LocalIP    string
-		LocalPort  string
-		RemoteAddr string
-		RemoteIP   string
-		RemotePort string
-	}{
+type templateDTO struct {
+	LocalAddr  string
+	LocalIP    string
+	LocalPort  string
+	RemoteAddr string
+	RemoteIP   string
+	RemotePort string
+}
+
+func buildTemplateDTO(laddr, addr *net.UDPAddr) templateDTO {
+	return templateDTO{
 		LocalAddr:  laddr.String(),
 		LocalIP:    safeIP(laddr.IP),
 		LocalPort:  strconv.Itoa(laddr.Port),
 		RemoteAddr: addr.String(),
 		RemoteIP:   safeIP(addr.IP),
 		RemotePort: strconv.Itoa(addr.Port),
-	})
+	}
+}
+
+func executeCommand(logger *log.Logger, dto templateDTO) error {
+	if command == "" {
+		return nil
+	}
+	binary, err := exec.LookPath(command)
+	if err != nil {
+		return err
+	}
+	args := []string{binary} // we do not know final length of this slice
+	for _, v := range commandArgs {
+		if v.template == nil {
+			args = append(args, v.raw)
+			continue
+		}
+		b := new(strings.Builder)
+		err = v.template.Execute(b, dto)
+		if err != nil {
+			return err
+		}
+		if v.split {
+			args = append(args, strings.Fields(b.String())...)
+		} else {
+			args = append(args, b.String())
+		}
+	}
+	logger.Print("Exec args:")
+	for i, v := range args {
+		logger.Printf("%d: %q", i, v)
+	}
+	err = syscall.Exec(binary, args, os.Environ())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func printResult(dto templateDTO) error {
+	return templateObj.Execute(os.Stdout, dto)
 }
 
 func logWriter() io.Writer {
@@ -219,6 +292,8 @@ func main() {
 		logger.Print("[info] Start in peer mode on " + localAddr + " to server at " + remoteAddr)
 		laddr, addr, err := netpunchlib.Client(ctx, role, localAddr, remoteAddr, connOption) // btw, abstraction leaking (role: arg->payload)
 		helpAndExitIfError(err)
-		helpAndExitIfError(printResult(laddr, addr))
+		dto := buildTemplateDTO(laddr, addr)
+		helpAndExitIfError(printResult(dto))
+		helpAndExitIfError(executeCommand(logger, dto))
 	}
 }
