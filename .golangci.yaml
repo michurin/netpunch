@@ -8,7 +8,7 @@ linters:
     - mnd
     - wrapcheck
       # deprecated
-    - exportloopref
+    - tenv
       # disabled because the Go version
     - copyloopvar
     - intrange
