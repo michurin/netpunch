@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -37,7 +38,10 @@ var (
 
 const defaultTemplate = "LADDR/LHOST/LPORT/RADDR/RHOST/RPORT: {{.LocalAddr}} {{.LocalIP}} {{.LocalPort}} {{.RemoteAddr}} {{.RemoteIP}} {{.RemotePort}}\n"
 
-func init() {
+func setupVersion() {
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		version += "-" + bi.Main.Path + "@" + bi.Main.Sum + "/" + bi.Main.Version
+	}
 	if gitCommit != "" {
 		version += "-" + gitCommit
 	}
@@ -178,6 +182,7 @@ func connectionOptions(loggingMiddleware, signingMiddleware netpunchlib.Connecti
 }
 
 func main() {
+	setupVersion()
 	helpAndExitIfError(setupFlags())
 	if showVersion {
 		fmt.Println(version)
