@@ -8,7 +8,7 @@ import (
 )
 
 type logInterface interface {
-	Print(v ...interface{})
+	Print(v ...any)
 }
 
 type logWrapper struct {
@@ -25,20 +25,6 @@ func LoggingMiddleware(log logInterface) ConnectionMiddleware {
 			isClosed: new(int32),
 		}
 	}
-}
-
-func (w *logWrapper) err(area string, err error) {
-	if atomic.AddInt32(w.isClosed, 0) != 0 {
-		opErr := (*net.OpError)(nil)
-		if errors.As(err, &opErr) {
-			return // skip errors after closing
-		}
-	}
-	w.log.Print(fmt.Sprintf("[error] %s: %s", area, err.Error()))
-}
-
-func (w *logWrapper) info(area, msg string) {
-	w.log.Print(fmt.Sprintf("[info] %s: %s", area, msg))
 }
 
 func (w *logWrapper) Close() error {
@@ -70,4 +56,18 @@ func (w *logWrapper) WriteToUDP(b []byte, addr *net.UDPAddr) (int, error) {
 	}
 	w.info("write", fmt.Sprintf("%q -> %s", b[:n], addr))
 	return n, err
+}
+
+func (w *logWrapper) err(area string, err error) {
+	if atomic.AddInt32(w.isClosed, 0) != 0 {
+		opErr := (*net.OpError)(nil)
+		if errors.As(err, &opErr) {
+			return // skip errors after closing
+		}
+	}
+	w.log.Print(fmt.Sprintf("[error] %s: %s", area, err.Error()))
+}
+
+func (w *logWrapper) info(area, msg string) {
+	w.log.Print(fmt.Sprintf("[info] %s: %s", area, msg))
 }
