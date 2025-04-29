@@ -1,60 +1,79 @@
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-      # nice to be turned on
-    - wsl
-    - nlreturn
-    - err113
-    - mnd
-    - wrapcheck
-      # deprecated
-    - tenv
-      # disabled because the Go version
     - copyloopvar
+    - err113
     - intrange
-
-linters-settings:
-  paralleltest:
-    ignore-missing: true
-  cyclop:
-    max-complexity: 20
-  funlen:
-    lines: 100
-  gocognit:
-    min-complexity: 40
-  lll:
-    line-length: 160
-  goimports:
-    local-prefixes: github.com/michurin/netpunch
-  varnamelen:
-    max-distance: 16
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/michurin/netpunch/netpunchlib)
-  depguard:
+    - mnd
+    - nlreturn
+    - wrapcheck
+    - wsl
+  settings:
+    cyclop:
+      max-complexity: 20
+    depguard:
+      rules:
+        regular:
+          files:
+            - ""
+          allow:
+            - $gostd
+            - github.com/michurin/netpunch/netpunchlib
+        tests:
+          files:
+            - $test
+          allow:
+            - $gostd
+            - github.com/michurin/netpunch/netpunchlib
+            - github.com/stretchr/testify/assert
+            - github.com/stretchr/testify/require
+            - go.uber.org/mock/gomock
+    funlen:
+      lines: 100
+    gocognit:
+      min-complexity: 40
+    lll:
+      line-length: 160
+    paralleltest:
+      ignore-missing: true
+    varnamelen:
+      max-distance: 16
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      regular:
-        files:
-          - !$test
-        allow:
-          - $gostd
-          - github.com/michurin/netpunch/netpunchlib
-      tests:
-        files:
-          - $test
-        allow:
-          - $gostd
-          - github.com/michurin/netpunch/netpunchlib
-          - github.com/stretchr/testify/assert
-          - github.com/stretchr/testify/require
-          - go.uber.org/mock/gomock
-
-issues:
-  exclude-rules:
-    - path: cmd/netpunch/main.go
-      linters:
-        - gochecknoinits
-        - gochecknoglobals
-        - forbidigo
+      - linters:
+          - forbidigo
+          - gochecknoglobals
+          - gochecknoinits
+        path: cmd/netpunch/main.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/michurin/netpunch/netpunchlib)
+    goimports:
+      local-prefixes:
+        - github.com/michurin/netpunch
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

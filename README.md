@@ -2,6 +2,7 @@
 
 [![build](https://github.com/michurin/netpunch/actions/workflows/ci.yaml/badge.svg)](https://github.com/michurin/netpunch/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/michurin/netpunch/branch/master/graph/badge.svg?token=XCJIGGU510)](https://codecov.io/gh/michurin/netpunch)
+[![linting](https://img.shields.io/badge/linting-golangci--lint--v2-blue)](https://golangci-lint.run/)
 
 Netpunch is a tool to establishes network connections between nodes which are behind NATs and firewalls.
 
