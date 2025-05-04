@@ -162,8 +162,8 @@ func Client(ctx context.Context, slot, address, remoteAddress string, opt ...Opt
 	conn := config.wrapConnection(udpConn)
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
-		cancel()     // we must to cancel first
-		conn.Close() // will be closed synchronously
+		cancel()         // we must to cancel first
+		_ = conn.Close() // will be closed synchronously
 	}()
 
 	serverDataChan := make(chan receivedMessage)
