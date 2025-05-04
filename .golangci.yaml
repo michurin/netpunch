@@ -7,6 +7,7 @@ linters:
     - intrange
     - mnd
     - nlreturn
+    - revive
     - wrapcheck
     - wsl
   settings:
@@ -41,21 +42,18 @@ linters:
       max-distance: 16
   exclusions:
     generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
+    warn-unused: true
     rules:
-      - linters:
+      - path: cmd/netpunch/main.go
+        linters:
           - forbidigo
           - gochecknoglobals
           - gochecknoinits
-        path: cmd/netpunch/main.go
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+          - gosec
+      - path: cmd/netpunch/main.go
+        source: "\\sfmt\\.Fprint(ln|f)\\("
+        linters:
+          - errcheck
 formatters:
   enable:
     - gci
@@ -71,9 +69,3 @@ formatters:
     goimports:
       local-prefixes:
         - github.com/michurin/netpunch
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
