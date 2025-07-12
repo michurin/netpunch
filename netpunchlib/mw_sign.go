@@ -70,7 +70,8 @@ func (w *signWrapper) WriteToUDP(b []byte, addr *net.UDPAddr) (int, error) {
 
 func (w *signWrapper) sum(data []byte) ([]byte, error) {
 	mac := hmac.New(sha256.New, w.secret)
-	if _, err := mac.Write(data); err != nil {
+	_, err := mac.Write(data)
+	if err != nil {
 		return nil, err
 	}
 	sum := mac.Sum(nil)
