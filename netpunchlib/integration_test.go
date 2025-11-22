@@ -53,7 +53,7 @@ func TestRegularInteraction(t *testing.T) {
 	go func() {
 		ctrlDone <- netpunchlib.Server(ctx, ctrlAddr, opt("server"))
 	}()
-	for i := 0; i < peers; i++ {
+	for i := range peers {
 		go func(role, peerAddr string) {
 			a, b, err := netpunchlib.Client(ctx, role, peerAddr, ctrlAddr, opt("peer "+role))
 			peerDone <- result{role: role, a: a, b: b, err: err}

@@ -41,12 +41,12 @@ func Server(ctx context.Context, address string, options ...Option) error {
 				continue
 			}
 			idx := int(slot - 'a')
-			addresses[idx] = bytes.Join([][]byte{
+			addresses[idx] = bytes.Join([][]byte{ //nolint:gosec // we checked range before
 				{labelPeerInfo},
 				data.message[:1],
 				[]byte(data.addr.String()),
 			}, []byte{labelsSeporator})
-			payload := addresses[idx^1]
+			payload := addresses[idx^1] //nolint:gosec // len is even
 			if payload == nil {
 				continue
 			}

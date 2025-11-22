@@ -2,12 +2,10 @@ version: "2"
 linters:
   default: all
   disable:
-    - copyloopvar
     - err113
-    - intrange
     - mnd
     - nlreturn
-    - revive
+    - revive # nice to be turned on
     - wrapcheck
     - wsl
     - wsl_v5
